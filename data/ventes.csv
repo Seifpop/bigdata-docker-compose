@@ -1,0 +1,6 @@
+date,produit,quantite,prix_unitaire,total
+2023-01-01,Ordinateur,5,800,4000
+2023-01-02,Souris,10,20,200
+2023-01-03,Clavier,8,50,400
+2023-01-04,Ordinateur,3,800,2400
+2023-01-05,Souris,15,20,300
