@@ -4,6 +4,12 @@ logs/
 
 # Data directories - NE PAS VERSIONNER CES DOSSIERS
 
+postgres_data/
+mysql_data/
+**/mysql_data/**
+**/postgres_data/**
+
+
 
 # Fichiers socket et temporaires
 *.sock
