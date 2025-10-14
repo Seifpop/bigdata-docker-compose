@@ -3,7 +3,7 @@
     {
       "text": "%sh\n\n#Only load a file to HDFS if it\u0027s not already there - because of this you can run all paragraphs as many times as you like.\nhadoop fs -test -e /grades.csv\n\nif ! hadoop fs -test -e /grades.csv\nthen\n    echo \"*******************************************\"\n    echo \"grades.csv is not in HDFS yet! Uploading...\"\n    echo \"*******************************************\"d\n    hadoop fs -put /data/grades.csv /\nfi",
       "user": "anonymous",
-      "dateUpdated": "2022-04-30 01:14:58.283",
+      "dateUpdated": "2025-10-14 22:00:36.789",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -27,7 +27,7 @@
         "msg": [
           {
             "type": "TEXT",
-            "data": "SLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2022-04-30 01:15:05,462 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nSLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2022-04-30 01:15:09,949 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n*******************************************\ngrades.csv is not in HDFS yet! Uploading...\n*******************************************d\nSLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2022-04-30 01:15:13,046 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n"
+            "data": "SLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2025-10-14 22:00:40,751 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nSLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2025-10-14 22:00:42,669 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n*******************************************\ngrades.csv is not in HDFS yet! Uploading...\n*******************************************d\nSLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2025-10-14 22:00:44,198 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\n"
           }
         ]
       },
@@ -37,14 +37,14 @@
       "jobName": "paragraph_1646274983838_2137241335",
       "id": "paragraph_1646190869576_761249469",
       "dateCreated": "2022-03-03 02:36:23.838",
-      "dateStarted": "2022-04-30 01:14:58.311",
-      "dateFinished": "2022-04-30 01:15:14.776",
+      "dateStarted": "2025-10-14 22:00:36.813",
+      "dateFinished": "2025-10-14 22:00:44.962",
       "status": "FINISHED"
     },
     {
       "text": "%sh\n\nhadoop fs -ls /",
       "user": "anonymous",
-      "dateUpdated": "2022-04-30 05:49:25.397",
+      "dateUpdated": "2025-10-14 22:00:45.020",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -68,7 +68,7 @@
         "msg": [
           {
             "type": "TEXT",
-            "data": "SLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2022-04-30 05:49:30,794 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 7 items\n-rw-r--r--   1 root supergroup        747 2022-04-30 05:46 /grades.csv\ndrwxr-xr-x   - root supergroup          0 2022-04-30 05:37 /hbase\ndrwxr-xr-x   - root supergroup          0 2022-04-30 05:35 /log\ndrwxr-xr-x   - root supergroup          0 2022-04-30 05:37 /spark-jars\ndrwxr-xr-x   - root supergroup          0 2022-04-30 05:37 /tez\ndrwxr-xr-x   - root supergroup          0 2022-04-30 05:41 /tmp\ndrwxrwx---   - root supergroup          0 2022-04-30 05:36 /user\n"
+            "data": "SLF4J: Class path contains multiple SLF4J bindings.\nSLF4J: Found binding in [jar:file:/usr/program/hadoop/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/tez/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: Found binding in [jar:file:/usr/program/hive/lib/log4j-slf4j-impl-2.10.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]\nSLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.\nSLF4J: Actual binding is of type [org.slf4j.impl.Log4jLoggerFactory]\n2025-10-14 22:00:45,961 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable\nFound 7 items\n-rw-r--r--   1 root supergroup        747 2025-10-14 22:00 /grades.csv\ndrwxr-xr-x   - root supergroup          0 2025-10-14 21:59 /hbase\ndrwxr-xr-x   - root supergroup          0 2025-10-14 21:58 /log\ndrwxr-xr-x   - root supergroup          0 2025-10-14 21:59 /spark-jars\ndrwxr-xr-x   - root supergroup          0 2025-10-14 21:59 /tez\ndrwxr-xr-x   - root supergroup          0 2025-10-14 21:58 /tmp\ndrwxrwx---   - root supergroup          0 2025-10-14 21:58 /user\n"
           }
         ]
       },
@@ -78,14 +78,14 @@
       "jobName": "paragraph_1646274983839_905369701",
       "id": "paragraph_1646190869577_987705583",
       "dateCreated": "2022-03-03 02:36:23.839",
-      "dateStarted": "2022-04-30 05:49:25.423",
-      "dateFinished": "2022-04-30 05:49:32.503",
+      "dateStarted": "2025-10-14 22:00:45.044",
+      "dateFinished": "2025-10-14 22:00:46.517",
       "status": "FINISHED"
     },
     {
       "text": "%jdbc\n\n-- Does not support more than one statement per paragraph, it seems. Same goes for semicolon at the end of statements - errors out if you include it.\nDROP TABLE IF EXISTS grades",
       "user": "anonymous",
-      "dateUpdated": "2022-04-30 05:49:37.119",
+      "dateUpdated": "2025-10-14 22:00:46.547",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -119,14 +119,14 @@
       "jobName": "paragraph_1646274983839_505401481",
       "id": "paragraph_1646190869577_409561374",
       "dateCreated": "2022-03-03 02:36:23.839",
-      "dateStarted": "2022-04-30 05:49:37.128",
-      "dateFinished": "2022-04-30 05:49:41.627",
-      "status": "ABORT"
+      "dateStarted": "2025-10-14 22:00:46.568",
+      "dateFinished": "2025-10-14 22:00:50.221",
+      "status": "FINISHED"
     },
     {
       "text": "%jdbc\n\nCREATE TABLE grades(\n    `Last name` STRING,\n    `First name` STRING,\n    `SSN` STRING,\n    `Test1` DOUBLE,\n    `Test2` INT,\n    `Test3` DOUBLE,\n    `Test4` DOUBLE,\n    `Final` DOUBLE,\n    `Grade` STRING)\nCOMMENT \u0027https://people.sc.fsu.edu/~jburkardt/data/csv/csv.html\u0027\nROW FORMAT DELIMITED\nFIELDS TERMINATED BY \u0027,\u0027\nSTORED AS TEXTFILE\ntblproperties(\"skip.header.line.count\"\u003d\"1\")",
       "user": "anonymous",
-      "dateUpdated": "2022-04-30 05:49:46.163",
+      "dateUpdated": "2025-10-14 22:00:50.273",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -150,11 +150,7 @@
         "msg": [
           {
             "type": "TEXT",
-            "data": "INFO  : Compiling command(queryId\u003droot_20220430054946_80da5dbd-8ec1-4a90-9261-58787dd04bfe): \n\nCREATE TABLE grades(\n    `Last name` S\n"
-          },
-          {
-            "type": "TEXT",
-            "data": "Query executed successfuTRING,\n    `First name` lSTlRyI.N GAffected rows ,:\n     `S-S1N\n` STRING,\n    `Test1` DOUBLE,\n    `Test2` INT,\n    `Test3` DOUBLE,\n    `Test4` DOUBLE,\n    `Final` DOUBLE,\n    `Grade` STRING)\nCOMMENT \u0027https://people.sc.fsu.edu/~jburkardt/data/csv/csv.html\u0027\nROW FORMAT DELIMITED\nFIELDS TERMINATED BY \u0027,\u0027\nSTORED AS TEXTFILE\ntblproperties(\"skip.header.line.count\"\u003d\"1\")\nINFO  : Concurrency mode is disabled, not creating a lock manager\nINFO  : Semantic Analysis Completed (retria"
+            "data": "Query executed successfully. Affected rows : -1\n"
           }
         ]
       },
@@ -164,14 +160,14 @@
       "jobName": "paragraph_1646274983840_1199882173",
       "id": "paragraph_1646190869577_1137362447",
       "dateCreated": "2022-03-03 02:36:23.840",
-      "dateStarted": "2022-04-30 05:49:46.168",
-      "dateFinished": "2022-04-30 05:49:48.225",
+      "dateStarted": "2025-10-14 22:00:50.296",
+      "dateFinished": "2025-10-14 22:00:51.311",
       "status": "FINISHED"
     },
     {
       "text": "%jdbc\n\nLOAD DATA INPATH \u0027/grades.csv\u0027 INTO TABLE grades",
       "user": "anonymous",
-      "dateUpdated": "2022-04-30 05:51:41.033",
+      "dateUpdated": "2025-10-14 22:00:51.397",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -195,7 +191,7 @@
         "msg": [
           {
             "type": "TEXT",
-            "data": "Query executed successfully. Affected rows : -1\nINFO  : Compiling command(queryId\u003droot_20220430055141_3cb58956-7959-4fde-8b31-a4e5cf36afb3): \n\nLOAD DATA INPATH \u0027/grades.csv\u0027 INTO TABLE grades\nINFO  : Concurrency mode is disabled, not creating a lock manager\nINFO  : Semantic Analysis Comp"
+            "data": "Query executed successfully. Affected rows : -1\n"
           }
         ]
       },
@@ -205,14 +201,14 @@
       "jobName": "paragraph_1646274983840_242464875",
       "id": "paragraph_1646190869577_1770491614",
       "dateCreated": "2022-03-03 02:36:23.840",
-      "dateStarted": "2022-04-30 05:51:41.039",
-      "dateFinished": "2022-04-30 05:51:42.169",
+      "dateStarted": "2025-10-14 22:00:51.423",
+      "dateFinished": "2025-10-14 22:00:51.843",
       "status": "FINISHED"
     },
     {
       "text": "%jdbc\n\nselect * from grades;\n-- set hive.execution.engine\u003dmr;\nSELECT grade,count(1) sl FROM grades group by grade;",
       "user": "anonymous",
-      "dateUpdated": "2022-04-30 05:51:48.726",
+      "dateUpdated": "2025-10-14 22:00:51.924",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -296,27 +292,44 @@
         "forms": {}
       },
       "results": {
-        "code": "SUCCESS",
+        "code": "ERROR",
         "msg": [
           {
             "type": "TABLE",
             "data": "last name\tfirst name\tssn\ttest1\ttest2\ttest3\ttest4\tfinal\tgrade\nAlfalfa\tAloysius\t123-45-6789\t40.0\t90\t100.0\t83.0\t49.0\tD-\nAlfred\tUniversity\t123-12-1234\t41.0\t97\t96.0\t97.0\t48.0\tD+\nGerty\tGramma\t567-89-0123\t41.0\t80\t60.0\t40.0\t44.0\tC\nAndroid\tElectric\t087-65-4321\t42.0\t23\t36.0\t45.0\t47.0\tB-\nBumpkin\tFred\t456-78-9012\t43.0\t78\t88.0\t77.0\t45.0\tA-\nRubble\tBetty\t234-56-7890\t44.0\t90\t80.0\t90.0\t46.0\tC-\nNoshow\tCecil\t345-67-8901\t45.0\t11\t-1.0\t4.0\t43.0\tF\nBuff\tBif\t632-79-9939\t46.0\t20\t30.0\t40.0\t50.0\tB+\nAirpump\tAndrew\t223-45-6789\t49.0\t1\t90.0\t100.0\t83.0\tA\nBackus\tJim\t143-12-1234\t48.0\t1\t97.0\t96.0\t97.0\tA+\nCarnivore\tArt\t565-89-0123\t44.0\t1\t80.0\t60.0\t40.0\tD+\nDandy\tJim\t087-75-4321\t47.0\t1\t23.0\t36.0\t45.0\tC+\nElephant\tIma\t456-71-9012\t45.0\t1\t78.0\t88.0\t77.0\tB-\nFranklin\tBenny\t234-56-2890\t50.0\t1\t90.0\t80.0\t90.0\tB-\nGeorge\tBoy\t345-67-3901\t40.0\t1\t11.0\t-1.0\t4.0\tB\nHeffalump\tHarvey\t632-79-9439\t30.0\t1\t20.0\t30.0\t40.0\tC\n"
           },
           {
-            "type": "TABLE",
-            "data": "grade\tsl\nA\t1\nA+\t1\nA-\t1\nB\t1\nB+\t1\nB-\t3\nC\t2\nC+\t1\nC-\t1\nD+\t2\nD-\t1\nF\t1\n"
+            "type": "TEXT",
+            "data": "INFO  : Compiling command(queryId\u003droot_20251014220053_aa69bdf8-0ae8-43cf-aecd-3acec6c77249): \n\n\n\nSELECT grade,count(1) sl FROM grades group by grade\nINFO  : Concurrency mode is disabled, not creating a lock manager\nINFO  : Semantic Analysis Completed (retrial \u003d false)\nINFO  : Returning Hive schema: Schema(fieldSchemas:[FieldSchema(name:grade, type:string, comment:null), FieldSchema(name:sl, type:bigint, comment:null)], properties:null)\nINFO  : Completed compiling command(queryId\u003droot_20251014220053_aa69bdf8-0ae8-43cf-aecd-3acec6c77249); Time taken: 0.642 seconds\nINFO  : Concurrency mode is disabled, not creating a lock manager\nINFO  : Executing command(queryId\u003droot_20251014220053_aa69bdf8-0ae8-43cf-aecd-3acec6c77249): \n\n\n\nSELECT grade,count(1) sl FROM grades group by grade\nINFO  : Query ID \u003d root_20251014220053_aa69bdf8-0ae8-43cf-aecd-3acec6c77249\nINFO  : Total jobs \u003d 1\nINFO  : Launching Job 1 out of 1\nINFO  : Starting task [Stage-1:MAPRED] in serial mode\nINFO  : Subscribed to counters: [] for queryId: root_20251014220053_aa69bdf8-0ae8-43cf-aecd-3acec6c77249\nINFO  : Tez session hasn\u0027t been created yet. Opening session\nINFO  : Dag name: SELECT grade,count(1) sl FROM grades...grade (Stage-1)\nINFO  : Status: Running (Executing on YARN cluster with App id application_1760479121365_0002)\n\n"
+          },
+          {
+            "type": "TEXT",
+            "data": "java.lang.NoClassDefFoundError: org/fusesource/jansi/Ansi\n\tat org.apache.hadoop.hive.common.log.InPlaceUpdate.reprintLine(InPlaceUpdate.java:66)\n\tat org.apache.hadoop.hive.common.log.InPlaceUpdate.reprintLine(InPlaceUpdate.java:82)\n\tat org.apache.hadoop.hive.common.log.InPlaceUpdate.render(InPlaceUpdate.java:154)\n\tat org.apache.zeppelin.jdbc.hive.BeelineInPlaceUpdateStream.update(BeelineInPlaceUpdateStream.java:65)\n\tat org.apache.hive.jdbc.HiveStatement.waitForOperationToComplete(HiveStatement.java:379)\n\tat org.apache.hive.jdbc.HiveStatement.execute(HiveStatement.java:266)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.executeSql(JDBCInterpreter.java:808)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.internalInterpret(JDBCInterpreter.java:939)\n\tat org.apache.zeppelin.interpreter.AbstractInterpreter.interpret(AbstractInterpreter.java:55)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:110)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:860)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:752)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:172)\n\tat org.apache.zeppelin.scheduler.AbstractScheduler.runJob(AbstractScheduler.java:132)\n\tat org.apache.zeppelin.scheduler.ParallelScheduler.lambda$runJobInScheduler$0(ParallelScheduler.java:46)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: java.lang.ClassNotFoundException: org.fusesource.jansi.Ansi\n\tat java.net.URLClassLoader.findClass(URLClassLoader.java:382)\n\tat java.lang.ClassLoader.loadClass(ClassLoader.java:419)\n\tat sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:352)\n\tat java.lang.ClassLoader.loadClass(ClassLoader.java:352)\n\t... 20 more\n"
           }
         ]
       },
       "apps": [],
-      "runtimeInfos": {},
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "HIVE JOB",
+          "tooltip": "View in YARN WEB UI",
+          "group": "jdbc",
+          "values": [
+            {
+              "jobUrl": "application_1760479121365_0002"
+            }
+          ],
+          "interpreterSettingId": "jdbc"
+        }
+      },
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1646274983840_110646290",
       "id": "paragraph_1646190869577_1331104341",
       "dateCreated": "2022-03-03 02:36:23.840",
-      "dateStarted": "2022-04-30 05:51:48.731",
-      "dateFinished": "2022-04-30 05:52:11.620",
-      "status": "FINISHED"
+      "dateStarted": "2025-10-14 22:00:51.954",
+      "dateFinished": "2025-10-14 22:01:03.823",
+      "status": "ERROR"
     },
     {
       "text": "%sh\n\n# Take a look at the warehouse directory, specifically where our Hive table is stored.\n hadoop fs -ls /usr/hive/warehouse/grades",
@@ -1250,5 +1263,7 @@
   "config": {
     "isZeppelinNotebookCronEnable": false
   },
-  "info": {}
+  "info": {
+    "isRunning": true
+  }
 }
