@@ -100,7 +100,7 @@ docker-compose restart
 | **Flink UI (Worker1)** | http://localhost:45081 | Flink on worker1 |
 | **Flink UI (Worker2)** | http://localhost:45082 | Flink on worker2 |
 | **Zeppelin** | http://localhost:8890 | Interactive notebooks |
-| **Kafka UI** | http://localhost:8089 | Kafka cluster management |
+| **Kafka UI** | http://localhost:8090 | Kafka cluster management |
 | **Trino** | http://localhost:28888 | Distributed SQL query engine |
 
 ### Database Connections
@@ -151,7 +151,7 @@ docker-compose restart
 | 7077 | Spark Master | Spark master communication |
 | 8080 | Spark Master UI | Spark cluster web interface |
 | 8088 | YARN ResourceManager | YARN web interface |
-| 8089 | Kafka UI | Kafka management interface |
+| 8090 | Kafka UI | Kafka management interface |
 | 8101-8102 | Spark Workers | Worker node job UIs |
 | 8890 | Zeppelin | Notebook interface |
 | 8981-8982 | Spark Workers UI | Worker status pages |
@@ -897,7 +897,7 @@ kafka-consumer-groups --describe \
 
 #### Kafka Web UI
 
-Access Kafka UI for easier management: http://localhost:8089
+Access Kafka UI for easier management: http://localhost:8090
 
 From the UI you can:
 - View topics and partitions
@@ -1603,9 +1603,9 @@ View:
 - Region distribution
 - Requests per second
 
-#### Kafka Monitoring
+#### Kafka Monitoring "akhq"
 
-Access Kafka UI: **http://localhost:8089**
+Access Kafka UI: **http://localhost:8090**
 
 View:
 - Topics and partitions
@@ -1850,7 +1850,7 @@ kafka-topics --list --bootstrap-server localhost:9092
 | HBase Master | http://localhost:16010 |
 | Flink | http://localhost:45080 |
 | Zeppelin | http://localhost:8890 |
-| Kafka UI | http://localhost:8089 |
+| Kafka UI | http://localhost:8090 |
 
 ### All Credentials
 

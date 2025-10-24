@@ -118,21 +118,33 @@ services:
         ipv4_address: 172.28.1.9
     restart: always
 
-  kafka_ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka_ui
+  akhq:
+    image: tchiotludo/akhq:latest
+    container_name: akhq
     depends_on:
       - kafka
+      - zookeeper_kafka
     ports:
-      - 8089:8080
+      - 8090:8080
     environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper_kafka:21810
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            local:
+              properties:
+                bootstrap.servers: "kafka:9092"
+                zookeeper.connect: "zookeeper_kafka:21810"
+          pagination:
+            page-size: 25
+          security:
+            default-group: admin
+          server:
+            access-log: true
     networks:
       spark_net:
         ipv4_address: 172.28.1.10
     restart: always
+
   # <<< KAFKA PART <<<
   zoo1:
     image: zookeeper
