@@ -6,6 +6,14 @@ A comprehensive big data platform that provides an easy way to experiment with v
 
 ## Version Information
 
+> **Note sur `conf/mapred-site.xml`** — l'image livre une configuration
+> MapReduce inutilisable en l'etat : ni `HADOOP_MAPRED_HOME` ni
+> `mapreduce.application.classpath` ne sont definis (tout job echoue sur
+> `Could not find or load main class ... MRAppMaster`), et la memoire reduce
+> demandee (2048 Mo) depasse le plafond YARN (`yarn.scheduler.maximum-allocation-mb`
+> = 1536 Mo). Le fichier `conf/mapred-site.xml` corrige les deux points et est
+> monte en lecture seule sur les trois noeuds Hadoop. Ne pas le supprimer.
+
 | Component | Version |
 |-----------|---------|
 | Hadoop | 3.2.3 |
@@ -22,7 +30,9 @@ A comprehensive big data platform that provides an easy way to experiment with v
 | Kafka | 7.5.0 (Confluent) |
 | PostgreSQL | 11.5 & 16 |
 | MySQL | 8.0 |
-| Zookeeper | Latest |
+| Zookeeper (HBase) | 3.8.4 |
+| Zookeeper (Kafka) | 7.5.0 (Confluent) |
+| AKHQ (Kafka UI) | 0.25.1 |
 
 ## Architecture Overview
 
@@ -30,7 +40,7 @@ The platform consists of:
 - **1 Master Node**: Hadoop NameNode, Spark Master, HBase Master, YARN ResourceManager
 - **2 Worker Nodes**: Hadoop DataNodes, Spark Workers, HBase RegionServers, YARN NodeManagers
 - **Zeppelin**: Interactive notebook interface
-- **Kafka Cluster**: With Zookeeper and Kafka UI
+- **Kafka Cluster**: Broker with its own dedicated Zookeeper, plus AKHQ web UI
 - **Databases**: PostgreSQL (2 instances) and MySQL
 - **Zookeeper Ensemble**: 3-node cluster for HBase coordination
 
@@ -38,15 +48,17 @@ The platform consists of:
 
 - **RAM**: Minimum 16GB recommended for your host machine
 - **Docker RAM**: Allocate at least 8GB to Docker
-- **Disk Space**: More than 90% free space required (YARN requirement)
+- **Disk Space**: ~30 GB free, and the disk holding Docker must stay **below 90% used**.
+  YARN's `max-disk-utilization-per-disk-percentage` defaults to 90: past that
+  threshold NodeManagers are flagged `UNHEALTHY` and stop accepting containers.
 - **Docker & Docker Compose**: Latest versions installed
 
 ## Quick Start
 
 ### Clone Repository
 ```bash
-git clone https://github.com/your-repo/bigdata-docker-compose.git
-cd bigdata-docker-compose
+git clone <URL-du-depot>
+cd "Fomation hadoop hbase hive"
 ```
 
 ### Start All Services
@@ -54,14 +66,9 @@ cd bigdata-docker-compose
 docker-compose up -d
 ```
 
-### Stop All Services
+### Stop All Services (donnees conservees)
 ```bash
 docker-compose stop
-```
-
-### Remove All Containers (Use with caution!)
-```bash
-docker-compose down
 ```
 
 ### Restart Services
@@ -69,39 +76,108 @@ docker-compose down
 docker-compose restart
 ```
 
+---
+
+### :warning: `stop` ou `down` ? A lire avant de fermer votre poste
+
+Ce cluster est **volontairement ephemere**. HDFS (`/dfs/name`, `/dfs/data`),
+les tables HBase et le metastore Hive vivent dans la couche inscriptible des
+conteneurs : **aucun volume ne les protege**.
+
+| Commande | Conteneurs | HDFS / HBase / metastore Hive |
+|---|---|---|
+| `docker-compose stop` | arretes | **conserves** |
+| `docker-compose start` | relances | **conserves** |
+| `docker-compose restart` | redemarres | **conserves** |
+| `docker-compose down` | **supprimes** | **PERDUS - definitivement** |
+
+**En fin de journee, utilisez `docker-compose stop`.**
+
+`docker-compose down` remet le cluster a zero : le NameNode est reformate au
+demarrage suivant, toutes les tables Hive et HBase disparaissent. C'est utile
+pour repartir proprement, jamais pour une simple pause.
+
+```bash
+# Remise a zero complete du cluster - detruit HDFS, HBase et le metastore
+docker-compose down
+```
+
+> Les fichiers de `./data`, `./data_share` et `./zeppelin_notebooks` sont des
+> bind mounts sur votre disque : eux survivent a un `down`. Pensez a y copier
+> ce que vous voulez garder (`hdfs dfs -get ...`) avant de detruire le cluster.
+
 ## Directory Structure
 
-- **data/**: Shared storage mounted in all containers for input/output files
-- **data_share/**: Additional shared volume
-- **logs/**: Contains logs for all services (hadoop, hbase, hive, spark, flink, zeppelin)
-- **zeppelin_notebooks/**: Persistent storage for Zeppelin notebooks
+| Dossier | Role | Survit a un `down` ? |
+|---|---|---|
+| **data/** | Jeux de donnees d'entree/sortie, monte dans master, worker1, worker2 et Zeppelin | Oui (bind mount) |
+| **data_share/** | Volume partage supplementaire, monte sur master uniquement | Oui (bind mount) |
+| **logs/** | Logs de tous les services (hadoop, hbase, hive, spark, flink, zeppelin) | Oui (bind mount) |
+| **zeppelin_notebooks/** | Notebooks Zeppelin | Oui (bind mount) |
+| **jdbc_drivers/** | Drivers JDBC MySQL et PostgreSQL pour les TP Sqoop | Oui |
+| **conf/** | Surcharges de configuration Hadoop montees dans master/worker1/worker2 | Oui |
+| *HDFS, HBase, metastore Hive* | *Internes aux conteneurs* | **Non** |
+
+Les bases `postgres_server` et `mysql_server` utilisent des volumes Docker
+nommes (`postgres_server_data`, `mysql_server_data`) : elles survivent a un
+`down`, et ne sont supprimees que par `docker-compose down -v`.
 
 ## Services & Access Points
 
 ### Web UI Interfaces
 
+Toutes les interfaces sont accessibles depuis le navigateur de la machine
+hote, sans authentification.
+
+#### Interfaces principales
+
 | Service | URL | Description |
 |---------|-----|-------------|
-| **YARN ResourceManager** | http://localhost:8088 | Hadoop cluster resource management |
-| **YARN ResourceManager v2** | http://localhost:8088/ui2 | Alternative YARN interface |
-| **Hadoop NameNode** | http://localhost:9870 | HDFS management interface |
-| **Hadoop DataNode 1** | http://localhost:9864 | First data node status |
-| **Hadoop DataNode 2** | http://localhost:9865 | Second data node status |
-| **Hadoop Secondary NameNode** | http://localhost:9868 | Secondary NameNode UI |
-| **YARN History Server** | http://localhost:19888 | Job history and logs |
-| **Spark Master** | http://localhost:8080 | Spark cluster overview |
-| **Spark Worker 1** | http://localhost:8981 | First Spark worker status |
-| **Spark Worker 2** | http://localhost:8982 | Second Spark worker status |
-| **Spark History Server** | http://localhost:18080 | Completed Spark applications |
-| **Spark History API** | http://localhost:18080/api/v1/applications | REST API for Spark history |
-| **Spark Job UI** | http://localhost:4040-4043 | Active job monitoring (incremental ports) |
-| **HBase Master** | http://localhost:16010 | HBase cluster management |
-| **Flink UI (Master)** | http://localhost:45080 | Flink job management on master |
-| **Flink UI (Worker1)** | http://localhost:45081 | Flink on worker1 |
-| **Flink UI (Worker2)** | http://localhost:45082 | Flink on worker2 |
-| **Zeppelin** | http://localhost:8890 | Interactive notebooks |
-| **Kafka UI** | http://localhost:8090 | Kafka cluster management |
-| **Trino** | http://localhost:28888 | Distributed SQL query engine |
+| **HDFS NameNode** | http://localhost:9870 | Explorateur HDFS, etat des DataNodes, blocs |
+| **YARN ResourceManager** | http://localhost:8088 | Applications, conteneurs, logs de jobs |
+| **YARN ResourceManager v2** | http://localhost:8088/ui2 | Interface YARN alternative |
+| **Spark Master** | http://localhost:8080 | Workers enregistres, applications standalone |
+| **Spark History Server** | http://localhost:18080 | Applications Spark terminees (YARN et standalone) |
+| **MapReduce JobHistory** | http://localhost:19888 | Jobs MapReduce termines, compteurs |
+| **HBase Master** | http://localhost:16010 | Tables, regions, RegionServers |
+| **HiveServer2** | http://localhost:10002 | Sessions et requetes Hive en cours |
+| **Zeppelin** | http://localhost:8890 | Notebooks interactifs |
+| **AKHQ** (Kafka) | http://localhost:8090 | Topics, messages, consumer groups |
+| **Trino** | http://localhost:28888 | Moteur SQL distribue |
+| **HDFS Secondary NameNode** | http://localhost:9868 | Checkpoints HDFS |
+
+#### Interfaces par noeud worker
+
+| Service | worker1 | worker2 |
+|---------|---------|---------|
+| **HDFS DataNode** | http://localhost:9864 | http://localhost:9865 |
+| **Spark Worker** | http://localhost:8981 | http://localhost:8982 |
+| **YARN NodeManager** | http://localhost:8101 | http://localhost:8102 |
+| **HBase RegionServer** | http://localhost:16031 | http://localhost:16032 |
+| **HBase Thrift2** | - | http://localhost:9095 |
+
+#### Interfaces a disponibilite conditionnelle
+
+| Service | URL | Disponible quand |
+|---------|-----|------------------|
+| **Spark Job UI** | http://localhost:4040 a :4043 | Uniquement pendant qu'une application Spark tourne. Le 1er job prend 4040, un 2e job simultane 4041, etc. Une fois le job termine, consulter le History Server (18080). |
+| **Flink JobManager** | http://localhost:45080 | Uniquement apres demarrage manuel d'un cluster Flink (voir section Flink) |
+| **Flink TaskManager w1** | http://localhost:45081 | idem |
+| **Flink TaskManager w2** | http://localhost:45082 | idem |
+
+#### API REST utiles
+
+| API | URL |
+|-----|-----|
+| Spark History (applications) | http://localhost:18080/api/v1/applications |
+| AKHQ (topics) | http://localhost:8090/api/local/topic |
+| YARN (applications) | http://localhost:8088/ws/v1/cluster/apps |
+| HDFS (etat du NameNode) | http://localhost:9870/jmx |
+
+> **Ports qui ne sont pas des interfaces web** (souvent confondus) :
+> 10000 Hive JDBC, 9090 HBase Thrift RPC, 9092 / 29092 Kafka,
+> 5432 / 5439 / 3307 bases de donnees, 2181-2183 / 21810 ZooKeeper,
+> 7077 Spark Master RPC, 10020 JobHistory RPC.
 
 ### Database Connections
 
@@ -109,15 +185,21 @@ docker-compose restart
 - **URI**: `jdbc:hive2://localhost:10000`
 - **Driver**: `org.apache.hive.jdbc.HiveDriver`
 - **Maven**: `org.apache.hive:hive-jdbc:3.1.2`
-- **User**: Not required
-- **Password**: Not required
+- **User**: aucun
+- **Password**: aucun
+- **Interface web**: http://localhost:10002 (sessions et requetes en cours)
 
 #### PostgreSQL - Hive Metastore
 - **Host**: localhost
 - **Port**: 5432
-- **Database**: Multiple (see init.sql)
+- **Database**: `hivemetastoredb` (et `pgdata`, voir `init.sql`)
 - **User**: postgres
 - **Password**: new_password
+
+> Base interne de Hive : pratique pour inspecter les metadonnees pendant un TP
+> (tables `TBLS`, `DBS`, `PARTITIONS`), a ne pas modifier a la main.
+> Le mot de passe est code en dur dans `hive-site.xml` a l'interieur de
+> l'image : le changer dans `docker-compose.yml` casse le metastore.
 
 #### PostgreSQL - Additional Server
 - **Host**: localhost
@@ -135,9 +217,18 @@ docker-compose restart
 - **Password**: admin
 
 ### Kafka Configuration
-- **Bootstrap Server**: localhost:9092
-- **Zookeeper**: localhost:21810
-- **Internal Network**: kafka:9092
+The broker exposes **two listeners**. Pick the right one or the connection
+will silently fail:
+
+| Depuis | Bootstrap server |
+|---|---|
+| La machine hote (script Python, kafka-console-*, IDE) | `localhost:9092` |
+| Un conteneur (master, workers, Zeppelin, AKHQ, Spark) | `kafka:29092` |
+
+- **Zookeeper (Kafka)**: `localhost:21810` depuis l'hote, `zookeeper_kafka:21810` depuis un conteneur
+
+Utiliser `localhost:9092` depuis un conteneur ne marche pas : le broker
+renvoie l'adresse annoncee, et le conteneur la resout vers lui-meme.
 
 ### Port Reference
 
@@ -151,22 +242,26 @@ docker-compose restart
 | 7077 | Spark Master | Spark master communication |
 | 8080 | Spark Master UI | Spark cluster web interface |
 | 8088 | YARN ResourceManager | YARN web interface |
-| 8090 | Kafka UI | Kafka management interface |
-| 8101-8102 | Spark Workers | Worker node job UIs |
+| 8090 | AKHQ (Kafka UI) | Kafka management interface |
+| 8101-8102 | YARN NodeManagers | NodeManager web UIs (worker1, worker2) |
 | 8890 | Zeppelin | Notebook interface |
 | 8981-8982 | Spark Workers UI | Worker status pages |
-| 9092 | Kafka | Kafka broker (external) |
+| 9090 | HBase Thrift2 | Thrift RPC (clients Python happybase, etc.) |
+| 9092 | Kafka | Kafka broker - listener hote (`localhost:9092`) |
+| 9095 | HBase Thrift2 | Thrift web UI |
 | 9864-9865 | Hadoop DataNodes | DataNode web interfaces |
 | 9868 | Secondary NameNode | Secondary NameNode UI |
 | 9870 | Hadoop NameNode | NameNode web interface |
 | 10000 | Hive Server2 | Hive JDBC/Thrift server |
-| 10020 | Flink JobManager | Flink job management |
+| 10002 | HiveServer2 UI | HiveServer2 web interface |
+| 10020 | MapReduce JobHistory | JobHistory server RPC |
 | 16010 | HBase Master | HBase management interface |
 | 18080 | Spark History | Spark history server |
 | 19888 | YARN History | MapReduce job history |
 | 21810 | Zookeeper (Kafka) | Kafka coordination |
 | 28888 | Trino | SQL query engine |
-| 29092 | Kafka | Kafka broker (internal) |
+| 16031-16032 | HBase RegionServers | RegionServer web UIs (worker1, worker2) |
+| 29092 | Kafka | Kafka broker - listener interne (`kafka:29092`) |
 | 45080-45082 | Flink | Flink web UIs (master + workers) |
 
 ## Network Configuration
@@ -184,7 +279,7 @@ All services run on the `spark_net` network with subnet `172.28.0.0/16`:
 | mysql_server | 172.28.1.7 | MySQL database |
 | zookeeper_kafka | 172.28.1.8 | Kafka Zookeeper |
 | kafka | 172.28.1.9 | Kafka broker |
-| kafka_ui | 172.28.1.10 | Kafka UI |
+| akhq | 172.28.1.10 | AKHQ (Kafka web UI) |
 | zoo1-3 | 172.28.1.11-13 | HBase Zookeeper ensemble |
 
 ## Connecting to Services
@@ -293,6 +388,11 @@ Total Nodes:2
    worker1:45019	        RUNNING	     worker1:8042
    worker2:41001	        RUNNING	     worker2:8042
 ```
+
+> Les ports Node-Id sont aleatoires a chaque demarrage, c'est normal.
+> `worker1:8042` est l'adresse **interne** du NodeManager ; depuis votre
+> navigateur, utilisez http://localhost:8101 (worker1) et
+> http://localhost:8102 (worker2).
 
 #### HDFS Operations
 ```bash
@@ -630,6 +730,11 @@ Flink supports two deployment modes:
 
 #### Cluster Mode (Flink manages resources)
 
+> Flink n'est **pas** demarre par `docker-compose up`. Tant que
+> `start-cluster.sh` n'a pas ete lance, les interfaces
+> http://localhost:45080 (JobManager) et :45081 / :45082 (TaskManagers)
+> ne repondent pas.
+
 **Start Flink cluster**:
 ```bash
 docker-compose exec master bash
@@ -775,7 +880,26 @@ Access HBase Master UI: http://localhost:16010
 
 #### HBase Thrift Server
 
-HBase ThriftServer is deployed on **worker2** for programmatic access (Python, Java, etc.).
+Le ThriftServer HBase (Thrift2) tourne sur **worker2** et est desormais
+joignable depuis la machine hote :
+
+| Usage | Adresse |
+|---|---|
+| RPC (clients happybase, Java, ...) | `localhost:9090` |
+| Interface web | http://localhost:9095 |
+
+```python
+# Depuis la machine hote (pip install happybase)
+import happybase
+conn = happybase.Connection("localhost", port=9090)
+print(conn.tables())
+```
+
+Verifier que le serveur tourne :
+
+```bash
+docker-compose exec worker2 jps | grep ThriftServer
+```
 
 ### 6. Kafka
 
@@ -895,9 +1019,9 @@ kafka-consumer-groups --describe \
     --bootstrap-server localhost:9092
 ```
 
-#### Kafka Web UI
+#### AKHQ (interface web Kafka)
 
-Access Kafka UI for easier management: http://localhost:8090
+http://localhost:8090
 
 From the UI you can:
 - View topics and partitions
@@ -1452,24 +1576,26 @@ docker-compose exec master bash -c "echo 'status \"summary\"' | hbase shell"
 # Master node
 docker-compose exec master jps
 
-# Expected processes:
-# - NameNode
-# - ResourceManager
-# - SecondaryNameNode
-# - Master (Spark)
-# - HMaster (HBase)
-# - HistoryServer
-# - JobHistoryServer
+# Processus attendus :
+# - NameNode              (HDFS)
+# - SecondaryNameNode     (HDFS)
+# - ResourceManager       (YARN)
+# - JobHistoryServer      (MapReduce)
+# - Master                (Spark standalone)
+# - HistoryServer         (Spark)
+# - HMaster               (HBase)
+# - RunJar x2             (HiveServer2 + Hive Metastore)
 
 # Worker nodes
 docker-compose exec worker1 jps
 docker-compose exec worker2 jps
 
-# Expected processes:
-# - DataNode
-# - NodeManager
-# - Worker (Spark)
-# - HRegionServer (HBase)
+# Processus attendus :
+# - DataNode              (HDFS)
+# - NodeManager           (YARN)
+# - Worker                (Spark standalone)
+# - HRegionServer         (HBase)
+# - ThriftServer          (HBase Thrift2, sur worker2 uniquement)
 ```
 
 ### View Logs
@@ -1605,7 +1731,7 @@ View:
 
 #### Kafka Monitoring "akhq"
 
-Access Kafka UI: **http://localhost:8090**
+Interface AKHQ : **http://localhost:8090**
 
 View:
 - Topics and partitions
@@ -1648,7 +1774,8 @@ yarn node -list -showDetails
 #### YARN Reports Unhealthy Nodes
 
 ```bash
-# Check disk space (must be > 90% free)
+# Verifier le disque. YARN marque un noeud UNHEALTHY au-dela de 90 %
+# D'UTILISATION (et non "90 % libre") : il faut donc rester SOUS ce seuil.
 df -h
 
 # Clean up Docker
@@ -1656,6 +1783,42 @@ docker system prune -a
 
 # Check YARN node health
 docker-compose exec master yarn node -list -all
+```
+
+#### MapReduce Job Fails
+
+Deux erreurs connues, toutes deux corrigees par `conf/mapred-site.xml`
+(monte sur master, worker1 et worker2). Si vous les voyez, c'est que ce
+fichier n'est plus monte.
+
+**1. Classe MRAppMaster introuvable**
+```
+Error: Could not find or load main class
+       org.apache.hadoop.mapreduce.v2.app.MRAppMaster
+```
+Cause : `HADOOP_MAPRED_HOME` et `mapreduce.application.classpath` ne sont pas
+transmis aux conteneurs YARN. Les conteneurs n'heritent pas de l'environnement
+du shell qui soumet le job.
+
+**2. Conteneur reduce trop gros**
+```
+REDUCE capability required is more than the supported max container
+capability in the cluster. reduceResourceRequest: <memory:2048>
+maxContainerCapability: <memory:1536>
+```
+Cause : la memoire demandee pour le reduce depasse
+`yarn.scheduler.maximum-allocation-mb`.
+
+**Verification**
+```bash
+# Les 4 proprietes doivent etre presentes dans le conteneur
+docker-compose exec master grep -c HADOOP_MAPRED_HOME \
+  /usr/program/hadoop/etc/hadoop/mapred-site.xml     # doit renvoyer 4
+
+# Job de reference
+docker-compose exec master bash -c \
+  'hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-*.jar pi 2 5'
+# Attendu : "Job Finished in ~15 seconds" puis "Estimated value of Pi is ..."
 ```
 
 #### Spark Job Fails
@@ -1753,19 +1916,49 @@ kafka-topics --delete --topic test-topic --bootstrap-server localhost:9092
 
 #### Reset Entire Cluster
 
+> :warning: **Ne supprimez jamais `./data/`.** Ce dossier contient les jeux de
+> donnees des TP (CSV, scripts HQL, fichiers d'entree), pas de l'etat de
+> cluster. L'effacer vous prive du materiel des TP suivants.
+
+**1. Reset du cluster Hadoop (cas courant)**
+
+`down` suffit : HDFS, HBase et le metastore Hive etant internes aux
+conteneurs, ils sont detruits et reconstruits a neuf au demarrage suivant.
+
 ```bash
-# Stop all services
-docker-compose stop
-
-# Remove all containers (data volumes preserved)
 docker-compose down
-
-# Remove all data (CAUTION: This deletes everything!)
-rm -rf ./logs/* ./data/* ./zeppelin_notebooks/* ./postgres_data/* ./mysql_data/*
-
-# Start fresh
 docker-compose up -d
 ```
+
+**2. Reset incluant les bases PostgreSQL et MySQL additionnelles**
+
+Celles-ci sont sur des volumes nommes, il faut donc `-v` pour les vider :
+
+```bash
+docker-compose down -v
+docker-compose up -d
+```
+
+**3. Nettoyage des logs (optionnel)**
+
+```bash
+# Le cluster doit etre arrete
+docker-compose stop
+rm -rf ./logs/hadoop/* ./logs/hbase/* ./logs/hive/* ./logs/spark/* ./logs/flink/* ./logs/zeppelin/*
+docker-compose start
+```
+
+**4. Repartir d'une image propre (rare - retelecharge ~7 Go)**
+
+```bash
+docker-compose down -v
+docker image rm lisacumt/hadoop-hive-hbase-spark-docker:1.1.6
+docker-compose up -d
+```
+
+> Avant tout reset, exportez ce que vous voulez garder :
+> `docker exec master hdfs dfs -get /votre/chemin /data/sauvegarde`
+> (`./data` est un bind mount, il survit a la destruction des conteneurs).
 
 ## 11. Best Practices
 
@@ -1805,37 +1998,47 @@ For production use:
 ### Essential Commands
 
 ```bash
-# Start platform
-docker-compose up -d
+# --- Cycle de vie ---
+docker-compose up -d           # demarrer
+docker-compose stop            # arreter EN CONSERVANT les donnees
+docker-compose start           # relancer
+docker-compose down            # DETRUIT HDFS, HBase et le metastore Hive
+docker-compose ps              # etat des 13 conteneurs
 
-# Stop platform
-docker-compose stop
+# --- Logs ---
+docker-compose logs -f         # tous les services
+docker-compose logs -f master  # un seul service
 
-# View logs
-docker-compose logs -f
-
-# Access master node
+# --- Acces shell ---
 docker-compose exec master bash
+docker-compose exec worker1 bash
+docker-compose exec master jps         # daemons Java
 
-# Check services
-docker-compose ps
-docker-compose exec master jps
+# --- HDFS (depuis master) ---
+hdfs dfs -ls /
+hdfs dfs -put /data/fichier.csv /
+hdfs dfs -cat /fichier.csv
+hdfs dfsadmin -report                  # etat des DataNodes
 
-# HDFS operations
-hadoop fs -ls /
-hadoop fs -put file.csv /
-hadoop fs -cat /file.csv
+# --- YARN ---
+yarn node -list
+yarn application -list
 
-# Hive
-hive -e "SHOW TABLES;"
+# --- Hive ---
+beeline -u jdbc:hive2://master:10000 -e "SHOW DATABASES;"
 
-# Spark submit
+# --- MapReduce (exemple de reference) ---
+hadoop jar /usr/program/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-*.jar pi 2 5
+
+# --- Spark : les deux ordonnanceurs ---
 spark-submit --master yarn --class MainClass app.jar
+spark-submit --master spark://master:7077 --class MainClass app.jar
+spark-shell --master yarn
 
-# HBase shell
+# --- HBase ---
 echo "list" | hbase shell
 
-# Kafka topic
+# --- Kafka (depuis le conteneur kafka) ---
 kafka-topics --list --bootstrap-server localhost:9092
 ```
 
@@ -1843,14 +2046,30 @@ kafka-topics --list --bootstrap-server localhost:9092
 
 | Service | URL |
 |---------|-----|
+| HDFS NameNode | http://localhost:9870 |
+| HDFS Secondary NameNode | http://localhost:9868 |
+| HDFS DataNode worker1 | http://localhost:9864 |
+| HDFS DataNode worker2 | http://localhost:9865 |
 | YARN ResourceManager | http://localhost:8088 |
-| Hadoop NameNode | http://localhost:9870 |
+| YARN NodeManager worker1 | http://localhost:8101 |
+| YARN NodeManager worker2 | http://localhost:8102 |
+| MapReduce JobHistory | http://localhost:19888 |
 | Spark Master | http://localhost:8080 |
-| Spark History | http://localhost:18080 |
+| Spark Worker 1 | http://localhost:8981 |
+| Spark Worker 2 | http://localhost:8982 |
+| Spark History Server | http://localhost:18080 |
+| Spark Job UI (job actif) | http://localhost:4040 |
 | HBase Master | http://localhost:16010 |
-| Flink | http://localhost:45080 |
+| HBase RegionServer worker1 | http://localhost:16031 |
+| HBase RegionServer worker2 | http://localhost:16032 |
+| HBase Thrift2 | http://localhost:9095 |
+| HiveServer2 | http://localhost:10002 |
 | Zeppelin | http://localhost:8890 |
-| Kafka UI | http://localhost:8090 |
+| AKHQ (Kafka) | http://localhost:8090 |
+| Trino | http://localhost:28888 |
+| Flink JobManager (si demarre) | http://localhost:45080 |
+| Flink TaskManager worker1 | http://localhost:45081 |
+| Flink TaskManager worker2 | http://localhost:45082 |
 
 ### All Credentials
 
@@ -1861,6 +2080,10 @@ kafka-topics --list --bootstrap-server localhost:9092
 | MySQL | root | root | 3307 | my_mysql_db |
 | MySQL | admin | admin | 3307 | my_mysql_db |
 | Hive JDBC | - | - | 10000 | - |
+
+> Mots de passe volontairement triviaux : environnement de formation isole,
+> jamais destine a une exposition reseau. Le mot de passe du metastore
+> (`new_password`) n'est pas modifiable, il est fige dans l'image.
 
 ---
 

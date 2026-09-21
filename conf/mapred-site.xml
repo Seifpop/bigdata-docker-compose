@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!--
+  ============================================================================
+   mapred-site.xml - surcharge du fichier fourni par l'image
+   lisacumt/hadoop-hive-hbase-spark-docker:1.1.6
+  ============================================================================
+
+   POURQUOI CE FICHIER EXISTE
+
+   Le mapred-site.xml embarque dans l'image ne definit ni HADOOP_MAPRED_HOME
+   ni mapreduce.application.classpath. Resultat : tout job MapReduce soumis a
+   YARN echoue au lancement du ApplicationMaster avec
+
+       Error: Could not find or load main class
+              org.apache.hadoop.mapreduce.v2.app.MRAppMaster
+
+   Les conteneurs YARN n'heritent pas de l'environnement du shell qui soumet
+   le job : le classpath MapReduce doit leur etre transmis explicitement.
+
+   Ce fichier reprend a l'identique le contenu de l'image et ajoute le bloc
+   "CLASSPATH MAPREDUCE" en fin de configuration.
+
+   Monte en lecture seule sur master, worker1 et worker2 via docker-compose.yml.
+  ============================================================================
+-->
+<configuration>
+
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+
+    <!-- https://hadoop.apache.org/docs/r3.1.2/hadoop-yarn/hadoop-yarn-site/ResourceModel.html -->
+    <!-- The amount of memory a container needs to run MR Application Master -->
+    <property>
+        <name>yarn.app.mapreduce.am.resource.memory-mb</name>
+        <value>512</value>
+    </property>
+    <!-- Upper memory limit that Hadoop allows to be allocated to a
+    mapper container, in megabytes. The default is 1024 -->
+    <property>
+        <name>mapreduce.map.resource.memory-mb</name>
+        <value>512</value>
+    </property>
+    <!-- Memoire allouee a un conteneur reduce, en megaoctets.
+         /!\ Corrige par rapport a l'image, qui demandait 2048 Mo alors que
+             yarn-site.xml plafonne yarn.scheduler.maximum-allocation-mb a
+             1536 Mo. Tout job comportant une phase reduce etait tue par YARN :
+                 REDUCE capability required is more than the supported max
+                 container capability in the cluster
+             1024 Mo reste sous le plafond et laisse tenir 4 conteneurs dans
+             les 4096 Mo de yarn.nodemanager.resource.memory-mb. -->
+    <property>
+        <name>mapreduce.reduce.resource.memory-mb</name>
+        <value>1024</value>
+    </property>
+
+    <property>
+        <name>mapreduce.jobhistory.done-dir</name>
+        <value>/user/history/done</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.intermediate-done-dir</name>
+        <value>/user/history/done_intermediate</value>
+    </property>
+
+    <!-- Adresse du serveur d'historique -->
+    <property>
+        <name>mapreduce.jobhistory.address</name>
+        <value>master:10020</value>
+    </property>
+
+    <!-- Adresse web du serveur d'historique -->
+    <property>
+        <name>mapreduce.jobhistory.webapp.address</name>
+        <value>master:19888</value>
+    </property>
+
+    <!-- =====================================================================
+         CLASSPATH MAPREDUCE - ajout par rapport au fichier de l'image
+         Sans ces quatre proprietes, aucun job MapReduce ne demarre.
+         ===================================================================== -->
+
+    <!-- Environnement du ApplicationMaster MapReduce -->
+    <property>
+        <name>yarn.app.mapreduce.am.env</name>
+        <value>HADOOP_MAPRED_HOME=/usr/program/hadoop</value>
+    </property>
+
+    <!-- Environnement des conteneurs map -->
+    <property>
+        <name>mapreduce.map.env</name>
+        <value>HADOOP_MAPRED_HOME=/usr/program/hadoop</value>
+    </property>
+
+    <!-- Environnement des conteneurs reduce -->
+    <property>
+        <name>mapreduce.reduce.env</name>
+        <value>HADOOP_MAPRED_HOME=/usr/program/hadoop</value>
+    </property>
+
+    <!-- Jars MapReduce mis a disposition des conteneurs YARN -->
+    <property>
+        <name>mapreduce.application.classpath</name>
+        <value>/usr/program/hadoop/share/hadoop/mapreduce/*:/usr/program/hadoop/share/hadoop/mapreduce/lib/*:/usr/program/hadoop/share/hadoop/common/*:/usr/program/hadoop/share/hadoop/common/lib/*:/usr/program/hadoop/share/hadoop/yarn/*:/usr/program/hadoop/share/hadoop/yarn/lib/*:/usr/program/hadoop/share/hadoop/hdfs/*:/usr/program/hadoop/share/hadoop/hdfs/lib/*</value>
+    </property>
+
+</configuration>

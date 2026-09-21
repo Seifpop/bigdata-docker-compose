@@ -1,13 +1,52 @@
+# =============================================================================
+#  Plateforme Big Data de formation - Hadoop / Hive / HBase / Spark / Flink
+#                                     Kafka / Zeppelin / Sqoop / Trino
+# =============================================================================
+#
+#  /!\ IMPORTANT - PERSISTANCE DES DONNEES /!\
+#
+#  Ce cluster est VOLONTAIREMENT EPHEMERE.
+#
+#  HDFS (/dfs/name, /dfs/data), les tables HBase et le metastore Hive vivent
+#  dans la couche inscriptible des conteneurs, sans volume.
+#
+#     docker compose stop / start / restart  ->  donnees CONSERVEES
+#     docker compose down                    ->  TOUT est perdu (HDFS + HBase
+#                                                + metastore Hive)
+#
+#  Ne PAS ajouter un volume uniquement sur /dfs ou sur hivemetastore :
+#  l'entrypoint de l'image rejoue "hdfs namenode -format" et
+#  "schematool -initSchema" tant que le marqueur
+#  /CONTAINER_ALREADY_STARTED_PLACEHOLDER (lui aussi dans la couche conteneur)
+#  est absent. Une persistance partielle detruirait le volume au redemarrage,
+#  ou ferait echouer l'init du schema Hive.
+#  Une persistance complete demande de persister AUSSI ce marqueur.
+#
+# =============================================================================
+
 services:
+
+  # ---------------------------------------------------------------------------
+  # METASTORE HIVE (PostgreSQL)
+  # ---------------------------------------------------------------------------
+  # /!\ POSTGRES_PASSWORD ne peut PAS etre change librement : la valeur
+  #     "new_password" est codee en dur dans
+  #     /usr/program/hive/conf/hive-site.xml a l'interieur de l'image.
+  #
+  # /!\ Version figee a 11.5 volontairement : l'image embarque deux drivers
+  #     JDBC PostgreSQL (42.2.8 et 9.4.1208). Le driver 9.4 ne supporte pas
+  #     SCRAM-SHA-256, authentification par defaut depuis PostgreSQL 14.
+  #     Monter en version demande de retirer le vieux jar de l'image.
+  # ---------------------------------------------------------------------------
   hivemetastore:
     image: postgres:11.5
     hostname: hivemetastore
+    container_name: hivemetastore
     environment:
       POSTGRES_PASSWORD: new_password
-    expose:
-      - 5432
     ports:
-      # JDBC 
+      # JDBC - permet d'inspecter le metastore depuis l'hote (DBeaver, psql).
+      # En cas de conflit avec un PostgreSQL local, passer en "5433:5432".
       - 5432:5432
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -16,21 +55,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
     networks:
       spark_net:
         ipv4_address: 172.28.1.4
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
-# -------------------------
-  # POSTGRESQL ADDITIONNEL
-  # -------------------------
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # POSTGRESQL ADDITIONNEL (TP Sqoop / JDBC)
+  # ---------------------------------------------------------------------------
   postgres_server:
     image: postgres:16
     hostname: postgres_server
@@ -40,24 +73,25 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_DB: my_postgres_db
     ports:
-      - 5439:5432  # Port différent de hivemetastore
+      - 5439:5432   # port distinct de hivemetastore
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      # Volume nomme plutot qu'un bind mount : sous Windows / Docker Desktop,
+      # un bind mount ne porte pas les permissions POSIX attendues par initdb.
+      - postgres_server_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       spark_net:
         ipv4_address: 172.28.1.6
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "postgres_server:172.28.1.6"
-      - "mysql_server:172.28.1.7"
-    restart: always
+    restart: unless-stopped
 
-  # -------------------------
-  # MYSQL ADDITIONNEL
-  # -------------------------
+  # ---------------------------------------------------------------------------
+  # MYSQL ADDITIONNEL (TP Sqoop / JDBC)
+  # ---------------------------------------------------------------------------
   mysql_server:
     image: mysql:8.0
     hostname: mysql_server
@@ -68,21 +102,26 @@ services:
       MYSQL_USER: admin
       MYSQL_PASSWORD: admin
     ports:
-      - 3307:3306  # Port différent du MySQL local
+      - 3307:3306   # port distinct d'un MySQL installe sur l'hote
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - mysql_server_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     networks:
       spark_net:
         ipv4_address: 172.28.1.7
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "postgres_server:172.28.1.6"
-      - "mysql_server:172.28.1.7"
-    restart: always
-  # >>> KAFKA PART >>>
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # KAFKA - ensemble ZooKeeper dedie, volontairement separe de zoo1-3
+  # ---------------------------------------------------------------------------
+  # Les deux ensembles ZK restent separes a dessein : on peut casser Kafka
+  # pendant un TP sans faire tomber HBase, et inversement.
+  # ---------------------------------------------------------------------------
   zookeeper_kafka:
     image: confluentinc/cp-zookeeper:7.5.0
     hostname: zookeeper_kafka
@@ -92,38 +131,66 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 21810:21810
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/21810"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks:
       spark_net:
         ipv4_address: 172.28.1.8
-    restart: always
+    restart: unless-stopped
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     hostname: kafka
     container_name: kafka
     depends_on:
-      - zookeeper_kafka
+      zookeeper_kafka:
+        condition: service_healthy
     ports:
-      - 9092:9092
-      - 29092:29092
+      - 9092:9092     # PLAINTEXT_HOST - clients sur la machine hote
+      - 29092:29092   # PLAINTEXT      - clients dans le reseau Docker
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper_kafka:21810
+      # -----------------------------------------------------------------------
+      # Deux listeners, c'est indispensable :
+      #   - les conteneurs (AKHQ, Spark, Zeppelin) joignent kafka:29092
+      #   - la machine hote joint localhost:9092
+      # Un listener unique annonce en "localhost" renverrait chaque conteneur
+      # vers son propre localhost : connexion impossible.
+      # -----------------------------------------------------------------------
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Broker unique : tous les topics internes en replication 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # Evite 3 s d'attente au demarrage de chaque consumer pendant les TP
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:29092", "--list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 45s
     networks:
       spark_net:
         ipv4_address: 172.28.1.9
-    restart: always
+    restart: unless-stopped
 
   akhq:
-    image: tchiotludo/akhq:latest
+    image: tchiotludo/akhq:0.25.1
+    hostname: akhq
     container_name: akhq
     depends_on:
-      - kafka
-      - zookeeper_kafka
+      kafka:
+        condition: service_healthy
     ports:
       - 8090:8080
     environment:
@@ -132,8 +199,7 @@ services:
           connections:
             local:
               properties:
-                bootstrap.servers: "kafka:9092"
-                zookeeper.connect: "zookeeper_kafka:21810"
+                bootstrap.servers: "kafka:29092"
           pagination:
             page-size: 25
           security:
@@ -143,86 +209,94 @@ services:
     networks:
       spark_net:
         ipv4_address: 172.28.1.10
-    restart: always
+    restart: unless-stopped
 
-  # <<< KAFKA PART <<<
+  # ---------------------------------------------------------------------------
+  # ENSEMBLE ZOOKEEPER (coordination HBase) - 3 noeuds
+  # ---------------------------------------------------------------------------
+  # Version figee a 3.8.4 : HBase 2.3.6 embarque un client ZooKeeper 3.5.7.
+  # Le tag "latest" est passe en 3.9.x, soit deux generations d'ecart.
+  # ---------------------------------------------------------------------------
   zoo1:
-    image: zookeeper
-    restart: always
+    image: zookeeper:3.8.4
     hostname: zoo1
+    container_name: zoo1
     ports:
       - 2181:2181
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+    healthcheck:
+      test: ["CMD", "zkServer.sh", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       spark_net:
         ipv4_address: 172.28.1.11
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
+    restart: unless-stopped
+
   zoo2:
-    image: zookeeper
-    restart: always
+    image: zookeeper:3.8.4
     hostname: zoo2
+    container_name: zoo2
     ports:
       - 2182:2181
     environment:
       ZOO_MY_ID: 2
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+    healthcheck:
+      test: ["CMD", "zkServer.sh", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       spark_net:
         ipv4_address: 172.28.1.12
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
+    restart: unless-stopped
+
   zoo3:
-    image: zookeeper
-    restart: always
+    image: zookeeper:3.8.4
     hostname: zoo3
+    container_name: zoo3
     ports:
       - 2183:2181
     environment:
       ZOO_MY_ID: 3
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+    healthcheck:
+      test: ["CMD", "zkServer.sh", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       spark_net:
         ipv4_address: 172.28.1.13
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
-      
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # MASTER - NameNode, ResourceManager, HMaster, Spark Master, HiveServer2
+  # ---------------------------------------------------------------------------
   master:
     image: lisacumt/hadoop-hive-hbase-spark-docker:1.1.6
-#    build: '../hadoop-hive-spark-docker'
     hostname: master
+    container_name: master
     depends_on:
-      - hivemetastore
-      - zoo1
-      - zoo2
-      - zoo3
+      hivemetastore:
+        condition: service_healthy   # le schema Hive s'initialise au 1er demarrage
+      zoo1:
+        condition: service_healthy
+      zoo2:
+        condition: service_healthy
+      zoo3:
+        condition: service_healthy
     environment:
       HADOOP_NODE: namenode
       HADOOP_SERVERS_HOSTNAME: master worker1 worker2
-      HADOOP_NNAMENADE_HOSTNAME: master
+      HADOOP_NNAMENADE_HOSTNAME: master   # orthographe de l'image, ne pas "corriger"
       HBASE_ROLE: hmaster
       HBASE_MASTER_HOSTNAME: master
       HBASE_REGIONSERVER_HOSTNAME: worker1 worker2
@@ -231,73 +305,90 @@ services:
       SPARK_MASTER_HOST: 172.28.1.1
       SPARK_LOCAL_HOSTNAME: master
       ZOO_SERVERS_HOSTNAME: zoo1 zoo2 zoo3
-      # Intentionally not specified - if it's set here, then we can't override it via REST API ("conf"={} map) Can be client or cluster
+      # Volontairement non defini : si SPARK_DEPLOY_MODE est fixe ici,
+      # on ne peut plus le surcharger via l'API REST ("conf"={}).
       # - SPARK_DEPLOY_MODE=client
+      #
+      # Ordonnanceur par defaut de spark-submit. Le cluster Spark standalone
+      # (port 7077) reste demarre en parallele : les deux modes sont utilises
+      # en TP, via "spark-shell --master yarn" ou "--master spark://master:7077".
       SPARK_MASTER: yarn
       LOCAL_DIR_WHITELIST: /data/batches/
-      ENABLE_HIVE_CONTEXT: false
-      # Defaults are fine for variables below. Uncomment to change them.
-    expose:
-      - 1-65535
+      # Alimente livy.repl.enable-hive-context dans livy.conf : active le
+      # support Hive dans les sessions Livy, donc dans l'interpreteur Livy de
+      # Zeppelin et via l'API REST. Sans effet sur spark-shell / spark-submit,
+      # qui lisent hive-site.xml directement depuis SPARK_CONF_DIR.
+      ENABLE_HIVE_CONTEXT: true
     ports:
-      # Spark Master Web UI
-      - 8080:8080
-      - 7077:7077
-      # Spark job Web UI: increments for each successive job
-      - 4040:4040
+      - 8080:8080     # Spark Master UI (mode standalone)
+      - 7077:7077     # Spark Master RPC (mode standalone)
+      - 4040:4040     # Spark Job UI (s'incremente a chaque job simultane)
       - 4041:4041
       - 4042:4042
       - 4043:4043
-      # Spark History server
-      - 18080:18080
-      # YARN UI
-      - 8088:8088
-      # YARN LOG SERVER UI
-      - 19888:19888
-      # Hadoop namenode UI
-      - 9870:9870
-      # Hadoop secondary namenode UI
-      - 9868:9868
-      # Hive JDBC
-      - 10000:10000
-      # HBase UI
-      - 16010:16010
-      # Flink UI
-      - 45080:45080
-      # Flink JobManager
-      - 10020:10020
-      # Trino
-      - 28888:28888
+      - 18080:18080   # Spark History Server
+      - 8088:8088     # YARN ResourceManager UI
+      - 19888:19888   # MapReduce JobHistory - UI web
+      - 10020:10020   # MapReduce JobHistory - RPC
+      - 9870:9870     # Hadoop NameNode UI
+      - 9868:9868     # Hadoop Secondary NameNode UI
+      - 10000:10000   # HiveServer2 - JDBC / Thrift
+      - 10002:10002   # HiveServer2 - UI web
+      - 16010:16010   # HBase Master UI
+      - 45080:45080   # Flink JobManager UI
+      - 28888:28888   # Trino
     volumes:
       - ./data:/data
+      # Corrige l'absence de HADOOP_MAPRED_HOME / mapreduce.application.classpath
+      # dans l'image : sans ce montage, aucun job MapReduce ne demarre sur YARN.
+      - ./conf/mapred-site.xml:/usr/program/hadoop/etc/hadoop/mapred-site.xml:ro
       - ./data_share:/data_share
       - ./logs/hadoop:/usr/program/hadoop/logs
       - ./logs/hbase:/usr/program/hbase/logs
       - ./logs/hive:/usr/program/hive/logs
       - ./logs/spark:/usr/program/spark/logs
       - ./logs/flink:/usr/program/flink/logs
+    # -------------------------------------------------------------------------
+    # Seul extra_hosts conserve, et pour une raison precise.
+    # L'image embarque son propre HEALTHCHECK :
+    #     curl -f http://host.docker.internal:8080/ &&
+    #     curl -f http://host.docker.internal:8088/
+    # Il interroge l'HOTE, pas le conteneur. Sous Docker Desktop
+    # (Windows/Mac) host.docker.internal existe deja ; sous Linux il ne
+    # resout pas, et les trois noeuds Hadoop restent affiches "unhealthy".
+    # host-gateway est resolu dynamiquement par Docker : aucune IP figee ici,
+    # contrairement aux extra_hosts supprimes du reste du fichier.
+    # -------------------------------------------------------------------------
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       spark_net:
         ipv4_address: 172.28.1.1
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
+    restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # WORKER 1 - DataNode, NodeManager, RegionServer, Spark Worker
+  # ---------------------------------------------------------------------------
   worker1:
     image: lisacumt/hadoop-hive-hbase-spark-docker:1.1.6
-#    build: '../hadoop-hive-spark-docker'
     hostname: worker1
+    container_name: worker1
     depends_on:
-      - hivemetastore
+      # master doit avoir formate le NameNode avant qu'un DataNode demarre,
+      # sinon le DataNode repart avec un clusterID incoherent.
+      master:
+        condition: service_started
+      hivemetastore:
+        condition: service_healthy
+      zoo1:
+        condition: service_healthy
+      zoo2:
+        condition: service_healthy
+      zoo3:
+        condition: service_healthy
     environment:
       HADOOP_NODE: datanode
-      HADOOP_NNAMENADE_HOSTNAME: master
+      HADOOP_NNAMENADE_HOSTNAME: master   # orthographe de l'image
       HADOOP_SERVERS_HOSTNAME: master worker1 worker2
       HBASE_ROLE: regionserver
       HBASE_MASTER_HOSTNAME: master
@@ -310,45 +401,61 @@ services:
       SPARK_LOCAL_IP: 172.28.1.2
       SPARK_MASTER_HOST: 172.28.1.1
       HADOOP_DATANODE_UI_PORT: 9864
-      ZOO_SERVERS_HOSTNAME:  zoo1 zoo2 zoo3
-    expose:
-      - 1-65535
+      ZOO_SERVERS_HOSTNAME: zoo1 zoo2 zoo3
     ports:
-      # Hadoop datanode UI
-      - 9864:9864
-      #Spark worker UI
-      - 8981:8981
-      # Spark Job UI
-      - 8101:8042
-      # Flink UI
-      - 45081:45080
+      - 9864:9864     # Hadoop DataNode UI
+      - 8981:8981     # Spark Worker UI
+      - 8101:8042     # YARN NodeManager UI
+      - 16031:16030   # HBase RegionServer UI
+      - 45081:45080   # Flink TaskManager UI
     volumes:
       - ./data:/data
+      # Corrige l'absence de HADOOP_MAPRED_HOME / mapreduce.application.classpath
+      # dans l'image : sans ce montage, aucun job MapReduce ne demarre sur YARN.
+      - ./conf/mapred-site.xml:/usr/program/hadoop/etc/hadoop/mapred-site.xml:ro
       - ./logs/hadoop:/usr/program/hadoop/logs
       - ./logs/hbase:/usr/program/hbase/logs
       - ./logs/hive:/usr/program/hive/logs
       - ./logs/spark:/usr/program/spark/logs
+    # -------------------------------------------------------------------------
+    # Seul extra_hosts conserve, et pour une raison precise.
+    # L'image embarque son propre HEALTHCHECK :
+    #     curl -f http://host.docker.internal:8080/ &&
+    #     curl -f http://host.docker.internal:8088/
+    # Il interroge l'HOTE, pas le conteneur. Sous Docker Desktop
+    # (Windows/Mac) host.docker.internal existe deja ; sous Linux il ne
+    # resout pas, et les trois noeuds Hadoop restent affiches "unhealthy".
+    # host-gateway est resolu dynamiquement par Docker : aucune IP figee ici,
+    # contrairement aux extra_hosts supprimes du reste du fichier.
+    # -------------------------------------------------------------------------
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       spark_net:
         ipv4_address: 172.28.1.2
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
+    restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # WORKER 2 - idem worker1, plus le serveur HBase Thrift
+  # ---------------------------------------------------------------------------
   worker2:
     image: lisacumt/hadoop-hive-hbase-spark-docker:1.1.6
-#    build: '../hadoop-hive-spark-docker'
     hostname: worker2
+    container_name: worker2
     depends_on:
-      - hivemetastore
+      master:
+        condition: service_started
+      hivemetastore:
+        condition: service_healthy
+      zoo1:
+        condition: service_healthy
+      zoo2:
+        condition: service_healthy
+      zoo3:
+        condition: service_healthy
     environment:
-      HADOOP_NNAMENADE_HOSTNAME: master
+      HADOOP_NODE: datanode
+      HADOOP_NNAMENADE_HOSTNAME: master   # orthographe de l'image
       HADOOP_SERVERS_HOSTNAME: master worker1 worker2
       HBASE_ROLE: regionserver thrift
       HBASE_MASTER_HOSTNAME: master
@@ -360,77 +467,96 @@ services:
       SPARK_LOCAL_HOSTNAME: worker2
       SPARK_LOCAL_IP: 172.28.1.3
       SPARK_MASTER_HOST: 172.28.1.1
-      HADOOP_NODE: datanode
       HADOOP_DATANODE_UI_PORT: 9865
-      ZOO_SERVERS_HOSTNAME:  zoo1 zoo2 zoo3
-    expose:
-      - 1-65535
+      ZOO_SERVERS_HOSTNAME: zoo1 zoo2 zoo3
     ports:
-      # Hadoop datanode UI
-      - 9865:9865
-      # Spark worker UI
-      - 8982:8982
-      # Spark Job UI
-      - 8102:8042
-      # Flink UI
-      - 45082:45080
+      - 9865:9865     # Hadoop DataNode UI
+      - 8982:8982     # Spark Worker UI
+      - 8102:8042     # YARN NodeManager UI
+      - 16032:16030   # HBase RegionServer UI
+      - 9090:9090     # HBase Thrift2 - RPC (clients Python happybase, etc.)
+      - 9095:9095     # HBase Thrift2 - UI web
+      - 45082:45080   # Flink TaskManager UI
     volumes:
       - ./data:/data
+      # Corrige l'absence de HADOOP_MAPRED_HOME / mapreduce.application.classpath
+      # dans l'image : sans ce montage, aucun job MapReduce ne demarre sur YARN.
+      - ./conf/mapred-site.xml:/usr/program/hadoop/etc/hadoop/mapred-site.xml:ro
       - ./logs/hadoop:/usr/program/hadoop/logs
       - ./logs/hbase:/usr/program/hbase/logs
       - ./logs/hive:/usr/program/hive/logs
       - ./logs/spark:/usr/program/spark/logs
+    # -------------------------------------------------------------------------
+    # Seul extra_hosts conserve, et pour une raison precise.
+    # L'image embarque son propre HEALTHCHECK :
+    #     curl -f http://host.docker.internal:8080/ &&
+    #     curl -f http://host.docker.internal:8088/
+    # Il interroge l'HOTE, pas le conteneur. Sous Docker Desktop
+    # (Windows/Mac) host.docker.internal existe deja ; sous Linux il ne
+    # resout pas, et les trois noeuds Hadoop restent affiches "unhealthy".
+    # host-gateway est resolu dynamiquement par Docker : aucune IP figee ici,
+    # contrairement aux extra_hosts supprimes du reste du fichier.
+    # -------------------------------------------------------------------------
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       spark_net:
         ipv4_address: 172.28.1.3
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
+    restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # ZEPPELIN - notebooks interactifs
+  # ---------------------------------------------------------------------------
   zeppelin:
-    image:  lisacumt/zeppelin-bigdata-docker:1.1.6
-#    build: '../zeppelin-bigdata-docker'
+    image: lisacumt/zeppelin-bigdata-docker:1.1.6
     hostname: zeppelin
+    container_name: zeppelin
     depends_on:
-      - master
-      - worker1
-      - worker2
+      master:
+        condition: service_started
+      worker1:
+        condition: service_started
+      worker2:
+        condition: service_started
+    environment:
+      ZEPPELIN_PORT: 8890
+      ZEPPELIN_NOTEBOOK_DIR: '/zeppelin_notebooks'
+    ports:
+      - 8890:8890
     volumes:
       - ./zeppelin_notebooks:/zeppelin_notebooks
       - ./data:/data
       - ./logs/zeppelin:/usr/program/zeppelin/logs
-    environment:
-      ZEPPELIN_PORT: 8890
-      ZEPPELIN_NOTEBOOK_DIR: '/zeppelin_notebooks'
-    expose:
-      - 8890
-    ports:
-      - 8890:8890
     networks:
       spark_net:
         ipv4_address: 172.28.1.5
-    extra_hosts:
-      - "master:172.28.1.1"
-      - "worker1:172.28.1.2"
-      - "worker2:172.28.1.3"
-      - "hivemetastore:172.28.1.4"
-      - "zeppelin:172.28.1.5"
-      - "zoo1:172.28.1.11"
-      - "zoo2:172.28.1.12"
-      - "zoo3:172.28.1.13"
+    restart: unless-stopped
 
+# =============================================================================
+#  RESEAU
+# =============================================================================
+#  Les adresses statiques occupent 172.28.1.0/24.
+#  ip_range cantonne l'allocation dynamique de Docker a 172.28.5.0/24 pour
+#  qu'un conteneur sans IP fixe ne puisse pas entrer en collision avec elles.
+#
+#  Aucun extra_hosts vers les services : tous partagent le reseau "spark_net"
+#  et le DNS interne de Docker resout deja master, worker1, kafka,
+#  hivemetastore... Des extra_hosts codes en dur masqueraient ce DNS et
+#  pointeraient dans le vide au moindre changement d'adresse.
+#
+#  Unique exception : "host.docker.internal:host-gateway" sur master, worker1
+#  et worker2, pour que le HEALTHCHECK embarque dans l'image fonctionne aussi
+#  sous Linux. host-gateway est resolu par Docker, ce n'est pas une IP figee.
+# =============================================================================
 networks:
   spark_net:
     ipam:
       driver: default
       config:
         - subnet: 172.28.0.0/16
-volumes:
-  data_share:
+          ip_range: 172.28.5.0/24
+          gateway: 172.28.0.1
 
+volumes:
+  postgres_server_data:
+  mysql_server_data:
