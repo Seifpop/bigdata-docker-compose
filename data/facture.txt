@@ -1,0 +1,10 @@
+FAC001|2024-01-15|Client_Dupont|1500.00|TVA_20|Payee
+FAC002|2024-01-16|Client_Martin|2300.50|TVA_20|En_attente
+FAC003|2024-01-17|Client_Bernard|890.00|TVA_10|Payee
+FAC004|2024-01-18|Client_Petit|3200.00|TVA_20|En_attente
+FAC005|2024-01-19|Client_Dubois|1750.25|TVA_20|Payee
+FAC006|2024-01-20|Client_Thomas|4500.00|TVA_20|Annulee
+FAC007|2024-01-21|Client_Robert|980.50|TVA_10|Payee
+FAC008|2024-01-22|Client_Richard|2100.00|TVA_20|En_attente
+FAC009|2024-01-23|Client_Moreau|1200.75|TVA_20|Payee
+FAC010|2024-01-24|Client_Simon|3350.00|TVA_20|Payee

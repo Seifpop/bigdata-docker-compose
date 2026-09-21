@@ -1,0 +1,19 @@
+put 'employes', 'emp001', 'info:nom','Dupont'
+put 'employes', 'emp001', 'info:prenom','Jean'
+put 'employes', 'emp001', 'info:age','55'
+put 'employes', 'emp001', 'info:poste','dev'
+put 'employes', 'emp001', 'contact:tel','00000000'
+put 'employes', 'emp001', 'contact:nmail','jean.dupont@blab.de'
+
+
+put 'employes', 'emp002', 'info:nom','Doe'
+put 'employes', 'emp002', 'info:prenom','Jhon'
+put 'employes', 'emp002', 'info:age','5é'
+put 'employes', 'emp002', 'info:poste','pdg'
+put 'employes', 'emp002', 'contact:tel','0111001000'
+put 'employes', 'emp002', 'contact:tel','0111001002'
+put 'employes', 'emp002', 'contact:nmail','jhon.doe@blab.de'
+
+
+
+put 'table','rowKey', 'column_Family:qualifier'

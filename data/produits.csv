@@ -1,6 +1,5 @@
-id_produit,nom_produit,categorie,prix
-1,Ordinateur,Electronique,800
-2,Souris,Electronique,20
-3,Clavier,Electronique,50
-4,Moniteur,Electronique,150
-5,Imprimante,Electronique,100
+1,Ordinateur,800,Electronique
+2,Souris,20,Electronique
+3,Livre,50,Education
+4,Moniteur,150,Electronique
+5,Imprimante,100,Electronique
