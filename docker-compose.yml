@@ -342,6 +342,7 @@ services:
       # Corrige l'absence de HADOOP_MAPRED_HOME / mapreduce.application.classpath
       # dans l'image : sans ce montage, aucun job MapReduce ne demarre sur YARN.
       - ./conf/mapred-site.xml:/usr/program/hadoop/etc/hadoop/mapred-site.xml:ro
+      - ./conf/core-site.xml:/usr/program/hadoop/etc/hadoop/core-site.xml:ro
       - ./data_share:/data_share
       - ./logs/hadoop:/usr/program/hadoop/logs
       - ./logs/hbase:/usr/program/hbase/logs
@@ -413,6 +414,7 @@ services:
       # Corrige l'absence de HADOOP_MAPRED_HOME / mapreduce.application.classpath
       # dans l'image : sans ce montage, aucun job MapReduce ne demarre sur YARN.
       - ./conf/mapred-site.xml:/usr/program/hadoop/etc/hadoop/mapred-site.xml:ro
+      - ./conf/core-site.xml:/usr/program/hadoop/etc/hadoop/core-site.xml:ro
       - ./logs/hadoop:/usr/program/hadoop/logs
       - ./logs/hbase:/usr/program/hbase/logs
       - ./logs/hive:/usr/program/hive/logs
@@ -482,6 +484,7 @@ services:
       # Corrige l'absence de HADOOP_MAPRED_HOME / mapreduce.application.classpath
       # dans l'image : sans ce montage, aucun job MapReduce ne demarre sur YARN.
       - ./conf/mapred-site.xml:/usr/program/hadoop/etc/hadoop/mapred-site.xml:ro
+      - ./conf/core-site.xml:/usr/program/hadoop/etc/hadoop/core-site.xml:ro
       - ./logs/hadoop:/usr/program/hadoop/logs
       - ./logs/hbase:/usr/program/hbase/logs
       - ./logs/hive:/usr/program/hive/logs
