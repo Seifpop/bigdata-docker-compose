@@ -23,6 +23,7 @@ A comprehensive big data platform that provides an easy way to experiment with v
 | Flink | 1.13.6 |
 | Zeppelin | 0.10.1 |
 | Sqoop | 1.4.7 |
+| Pig | 0.17.0 (ajoute a l'image du master) |
 | Tez | 0.9.2 |
 | Scala | 2.12 |
 | Hudi | 0.10.0 |
@@ -96,6 +97,12 @@ conteneurs : **aucun volume ne les protege**.
 `docker-compose down` remet le cluster a zero : le NameNode est reformate au
 demarrage suivant, toutes les tables Hive et HBase disparaissent. C'est utile
 pour repartir proprement, jamais pour une simple pause.
+
+Meme piege apres une modification de `docker-compose.yml` : si vous touchez au
+service `master`, `docker-compose up -d` **recree** le conteneur et reformate
+HDFS exactement comme un `down`. Les DataNodes des workers refusent alors le
+nouveau NameNode (`Incompatible clusterIDs`) : recreez-les aussi avec
+`docker-compose up -d --force-recreate --no-deps worker1 worker2`.
 
 ```bash
 # Remise a zero complete du cluster - detruit HDFS, HBase et le metastore
@@ -1161,6 +1168,71 @@ sqoop import \
     --null-non-string '\\N' \
     -- --schema pguser_public
 ```
+
+### 7b. Pig
+
+Apache Pig 0.17.0 est installe dans le conteneur `master`
+(`PIG_HOME=/usr/program/pig`, commande `pig` dans le PATH). **Rien a
+installer** : au premier `docker-compose up -d` apres un `clone` ou un `pull`,
+docker-compose construit automatiquement l'image `bigdata-master-pig:0.17.0`
+a partir de [docker/master/Dockerfile](docker/master/Dockerfile) (image du
+cluster + Pig telecharge depuis Apache). Ce premier demarrage prend quelques
+minutes de plus.
+
+> :warning: Apres un `pull` qui apporte Pig, `docker-compose up -d` **recree**
+> le conteneur `master` : HDFS est remis a zero (voir l'avertissement
+> `stop` / `down` plus haut). Recuperez d'abord vos resultats avec
+> `hdfs dfs -get`, puis recreez aussi les workers :
+> `docker-compose up -d --force-recreate worker1 worker2`.
+
+#### Verifier l'installation
+
+```bash
+docker-compose exec master pig -version
+# Apache Pig version 0.17.0 (r1797386)
+```
+
+#### WordCount en Pig Latin (sur YARN)
+
+```bash
+docker-compose exec master bash
+printf "hello world hello pig\npig sur yarn\n" > /tmp/in.txt
+hadoop fs -mkdir -p /pig && hadoop fs -put -f /tmp/in.txt /pig/in.txt
+```
+
+Creez `/tmp/wc.pig` :
+
+```pig
+lines  = LOAD '/pig/in.txt' AS (line:chararray);
+words  = FOREACH lines GENERATE FLATTEN(TOKENIZE(line)) AS word;
+grp    = GROUP words BY word;
+counts = FOREACH grp GENERATE group, COUNT(words);
+STORE counts INTO '/pig/out';
+```
+
+```bash
+pig -x mapreduce /tmp/wc.pig     # job MapReduce visible sur http://localhost:8088
+hadoop fs -cat /pig/out/part-*
+```
+
+Resultat attendu :
+
+```
+pig	2
+sur	1
+yarn	1
+hello	2
+world	1
+```
+
+#### Modes d'execution
+
+| Commande | Mode | Donnees lues dans |
+|---|---|---|
+| `pig` ou `pig -x mapreduce` | MapReduce sur YARN | HDFS |
+| `pig -x local` | local, sans cluster | disque du conteneur (`/data`, `/tmp`...) |
+
+Sans argument, `pig` ouvre le shell interactif **Grunt** (`quit` pour sortir).
 
 ### 8. Hudi
 

@@ -281,7 +281,10 @@ services:
   # MASTER - NameNode, ResourceManager, HMaster, Spark Master, HiveServer2
   # ---------------------------------------------------------------------------
   master:
-    image: lisacumt/hadoop-hive-hbase-spark-docker:1.1.6
+    # Image de base + Apache Pig (voir docker/master/Dockerfile).
+    # Construite automatiquement au premier "docker-compose up -d".
+    build: ./docker/master
+    image: bigdata-master-pig:0.17.0
     hostname: master
     container_name: master
     depends_on:
