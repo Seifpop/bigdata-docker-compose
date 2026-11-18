@@ -42,3 +42,4 @@ support_cours/Hive/*
 !support_cours/Hive/serie_hive.pdf
 support_cours/hbase/*
 !support_cours/hbase/serie_hbase.pdf
+guide_bigdata_architecture_cluster.html
