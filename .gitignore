@@ -31,15 +31,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-# Supports de cours
-# Tout est exclu, SAUF les enonces d'exercices au format PDF.
-# Les corrections, les sources Markdown et le guide formateur restent prives.
-support_cours/*
-!support_cours/Hive/
-!support_cours/hbase/
-!support_cours/serie_hdfs.pdf
-support_cours/Hive/*
-!support_cours/Hive/serie_hive.pdf
-support_cours/hbase/*
-!support_cours/hbase/serie_hbase.pdf
+# Supports de cours : rien n'est publie (enonces distribues via le Drive).
+support_cours/
 guide_bigdata_architecture_cluster.html
