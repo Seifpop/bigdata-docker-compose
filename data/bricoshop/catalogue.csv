@@ -1,0 +1,17 @@
+id_produit,produit,rayon,prix
+P01,Marteau,Outillage,19.90
+P02,Pince,Outillage,14.90
+P03,Tournevis,Outillage,9.90
+P04,Niveau,Outillage,12.90
+P05,Escabeau,Outillage,59.00
+P06,Clous,Quincaillerie,4.50
+P07,Vis,Quincaillerie,6.50
+P08,Chevilles,Quincaillerie,5.90
+P09,Perceuse,Electroportatif,89.00
+P10,Forets,Electroportatif,24.90
+P11,Peinture,Peinture,45.00
+P12,Pinceau,Peinture,6.90
+P13,Rouleau,Peinture,8.90
+P14,Scotch,Peinture,4.20
+P15,Gants,Protection,7.90
+P16,Lunettes,Protection,8.90
